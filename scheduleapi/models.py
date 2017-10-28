@@ -1,39 +1,59 @@
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.login import UserMixin, AnonymousUserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mongoengine import MongoEngine
+from flask_security import Security, MongoEngineUserDatastore, UserMixin
+from flask_security import utils, core, RoleMixin
+from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
+                          BadSignature, SignatureExpired, BadData)
 
-db = SQLAlchemy()
+db = MongoEngine()
 
 
-class User(db.Model, UserMixin):
-    id = db.Column(db.Integer(), primary_key=True)
-    username = db.Column(db.String())
-    password = db.Column(db.String())
+class Role(db.Document, RoleMixin):
+    name = db.StringField(max_length=80, unique=True)
+    description = db.StringField(max_length=255)
+
+
+class User(db.Document, UserMixin):
+    f_name = db.StringField()
+    l_name = db.StringField()
+    active = db.BooleanField(default=True)
+    confirmed_at = db.DateTimeField()
+    password = db.StringField()
+    roles = db.ListField(db.ReferenceField(Role), default=[])
+    email = db.StringField(unique=True)
 
     def __init__(self, username, password):
         self.username = username
         self.set_password(password)
 
     def set_password(self, password):
-        self.password = generate_password_hash(password)
+        self.password = utils.hash_password(password)
 
     def check_password(self, value):
-        return check_password_hash(self.password, value)
+        return utils.verify_password(value, self.password)
 
-    def is_authenticated(self):
-        if isinstance(self, AnonymousUserMixin):
-            return False
-        else:
-            return True
+    def generate_auth_token(self, expiration=15000):
+        s = Serializer(app.config["SECRET_KEY"], expires_in=expiration)
+        token = s.dumps({'email': self.email, 'roles':self.roles})
+        return token
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(app.config["SECRET_KEY"])
+        data = None
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            print("Signature Expired")
+            return None
+        except BadSignature:
+            print("Signature is bad")
+            return None
+        user = User.objects(email=data["email"]).first()
+        return user
 
     def is_active(self):
         return True
-
-    def is_anonymous(self):
-        if isinstance(self, AnonymousUserMixin):
-            return True
-        else:
-            return False
 
     def get_id(self):
         return self.id

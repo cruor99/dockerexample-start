@@ -6,11 +6,14 @@ __email__ = 'kliknes@gmail.com'
 __version__ = '0.1'
 
 from flask import Flask
+from flask_cors import CORS
 from webassets.loaders import PythonLoader as PythonAssetsLoader
+from flask_security import Security, MongoEngineUserDatastore
+from flask_restful import Api
 
 from scheduleapi.controllers.main import main
 from scheduleapi import assets
-from scheduleapi.models import db
+from scheduleapi.models import db, User, Role
 
 from scheduleapi.extensions import (
     cache,
@@ -36,6 +39,12 @@ def create_app(object_name):
 
     app.config.from_object(object_name)
 
+    CORS(app)
+
+    user_datastore = MongoEngineUserDatastore(db, User, Role)
+    security = Security(app, user_datastore)
+    app.user_datastore = user_datastore
+
     # initialize the cache
     cache.init_app(app)
 
@@ -55,5 +64,7 @@ def create_app(object_name):
 
     # register our blueprints
     app.register_blueprint(main)
+
+    api = Api(app)
 
     return app
