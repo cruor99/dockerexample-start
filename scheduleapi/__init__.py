@@ -11,7 +11,9 @@ from webassets.loaders import PythonLoader as PythonAssetsLoader
 from flask_security import Security, MongoEngineUserDatastore
 from flask_restful import Api
 
-from scheduleapi.controllers.main import main
+from scheduleapi.controllers.main import main, RegisterResource
+from scheduleapi.controllers.main import RestrictedUsersResource
+from scheduleapi.controllers.main import TokenResource
 from scheduleapi import assets
 from scheduleapi.models import db, User, Role
 
@@ -66,5 +68,8 @@ def create_app(object_name):
     app.register_blueprint(main)
 
     api = Api(app)
+    api.add_resource(RegisterResource, "/api/users")
+    api.add_resource(RestrictedUsersResource, "/api/restrictedtest")
+    api.add_resource(TokenResource, "/api/login")
 
     return app

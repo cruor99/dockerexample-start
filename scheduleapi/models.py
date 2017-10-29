@@ -1,5 +1,5 @@
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mongoengine import MongoEngine
+from flask import current_app as app
 from flask_security import Security, MongoEngineUserDatastore, UserMixin
 from flask_security import utils, core, RoleMixin
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
@@ -18,23 +18,19 @@ class User(db.Document, UserMixin):
     l_name = db.StringField()
     active = db.BooleanField(default=True)
     confirmed_at = db.DateTimeField()
-    password = db.StringField()
+    password_hash = db.StringField()
     roles = db.ListField(db.ReferenceField(Role), default=[])
     email = db.StringField(unique=True)
 
-    def __init__(self, username, password):
-        self.username = username
-        self.set_password(password)
+    def set_password(self, password_hash):
+        self.password_hash = utils.hash_password(password_hash)
 
-    def set_password(self, password):
-        self.password = utils.hash_password(password)
-
-    def check_password(self, value):
-        return utils.verify_password(value, self.password)
+    def verify_password(self, value):
+        return utils.verify_password(value, self.password_hash)
 
     def generate_auth_token(self, expiration=15000):
         s = Serializer(app.config["SECRET_KEY"], expires_in=expiration)
-        token = s.dumps({'email': self.email, 'roles':self.roles})
+        token = s.dumps({'email': self.email})
         return token
 
     @staticmethod

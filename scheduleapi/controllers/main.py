@@ -1,42 +1,63 @@
 from flask import Blueprint, render_template, flash, request, redirect, url_for
 from flask.ext.login import login_user, logout_user, login_required
+from flask_restful import Api, Resource
+from flask_restful.reqparse import RequestParser
+from flask import jsonify, abort, request, json, g
+from flask_httpauth import HTTPBasicAuth as Auth
+from flask_security import Security, MongoEngineUserDatastore
+from flask import current_app as app
 
 from scheduleapi.extensions import cache
 from scheduleapi.forms import LoginForm
-from scheduleapi.models import User
+from scheduleapi.models import User, db
+import datetime
 
 main = Blueprint('main', __name__)
+auth = Auth(app)
 
 
-@main.route('/')
-@cache.cached(timeout=1000)
-def home():
-    return render_template('index.html')
+@auth.verify_password
+def verify_password(email_or_token, password):
+    user = User.verify_auth_token(email_or_token)
+    if not user:
+        # attempt to auth with email/password
+        user = User.objects(email=email_or_token).first()
+        if not user or not user.verify_password(password):
+            return False
+    g.user = user
+    return True
 
 
-@main.route("/login", methods=["GET", "POST"])
-def login():
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).one()
-        login_user(user)
-
-        flash("Logged in successfully.", "success")
-        return redirect(request.args.get("next") or url_for(".home"))
-
-    return render_template("login.html", form=form)
-
-
-@main.route("/logout")
-def logout():
-    logout_user()
-    flash("You have been logged out.", "success")
-
-    return redirect(url_for(".home"))
+class RegisterResource(Resource):
+    def post(self):
+        user_datastore = app.user_datastore
+        email = request.json.get("email")
+        password = request.json.get("password")
+        if not email or not password:
+            abort(400)
+        if User.objects(email=email).first():
+            abort(400)
+        user = User()
+        user.email = email
+        user.set_password(password)
+        user_datastore.create_user(
+                password_hash=user.password_hash,
+                email=user.email,
+                roles=["admin"],
+                confirmed_at=datetime.datetime.now())
+        return {"email": user.email}, 201
 
 
-@main.route("/restricted")
-@login_required
-def restricted():
-    return "You can only see this if you are logged in!", 200
+class RestrictedUsersResource(Resource):
+    decorators = [auth.login_required]
+
+    def get(self):
+        return {"message": "You authenticated properly"}
+
+
+class TokenResource(Resource):
+    decorators = [auth.login_required]
+    def get(self):
+        token = g.user.generate_auth_token()
+        print("TOKEN: {}".format(token))
+        return {"token": token.decode("ascii")}

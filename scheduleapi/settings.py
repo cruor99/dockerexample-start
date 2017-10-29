@@ -18,10 +18,14 @@ class DevConfig(Config):
     DEBUG = True
     DEBUG_TB_INTERCEPT_REDIRECTS = False
 
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///../database.db'
+    MONGODB_SETTINGS = {
+            "db": "Scheduletest",
+            "host": "127.0.0.1",
+            "port": 27017
+            }
 
-    CACHE_TYPE = 'null'
-    ASSETS_DEBUG = True
+    SECURITY_PASSWORD_HASH = 'bcrypt'
+    SECURITY_PASSWORD_SALT = "saly"
 
 
 class TestConfig(Config):
