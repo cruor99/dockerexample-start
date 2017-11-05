@@ -8,6 +8,7 @@ from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
 db = MongoEngine()
 
 
+
 class Role(db.Document, RoleMixin):
     name = db.StringField(max_length=80, unique=True)
     description = db.StringField(max_length=255)
@@ -56,3 +57,12 @@ class User(db.Document, UserMixin):
 
     def __repr__(self):
         return '<User %r>' % self.username
+
+
+class Jobs(db.Document):
+    clientname = db.StringField()
+    address = db.StringField()
+    contact_number = db.StringField()
+    details = db.StringField()
+    keywords = db.StringField()
+    employee = db.ReferenceField(User)

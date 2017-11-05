@@ -11,6 +11,7 @@ from scheduleapi.extensions import cache
 from scheduleapi.forms import LoginForm
 from scheduleapi.models import User, db
 import datetime
+import json as pjson
 
 main = Blueprint('main', __name__)
 auth = Auth(app)
@@ -41,10 +42,10 @@ class RegisterResource(Resource):
         user.email = email
         user.set_password(password)
         user_datastore.create_user(
-                password_hash=user.password_hash,
-                email=user.email,
-                roles=["admin"],
-                confirmed_at=datetime.datetime.now())
+            password_hash=user.password_hash,
+            email=user.email,
+            roles=["admin"],
+            confirmed_at=datetime.datetime.now())
         return {"email": user.email}, 201
 
 
@@ -57,7 +58,15 @@ class RestrictedUsersResource(Resource):
 
 class TokenResource(Resource):
     decorators = [auth.login_required]
+
     def get(self):
         token = g.user.generate_auth_token()
         print("TOKEN: {}".format(token))
-        return {"token": token.decode("ascii")}
+        return {
+            "token": token.decode("ascii"),
+            "user": pjson.loads(g.user.to_json())
+        }
+
+
+class JobsResource(Resource):
+    decorators = [auth.login_required]
