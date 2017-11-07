@@ -13,7 +13,7 @@ env = os.environ.get('SCHEDULEAPI_ENV', 'dev')
 app = create_app('scheduleapi.settings.%sConfig' % env.capitalize())
 
 manager = Manager(app)
-manager.add_command("server", Server())
+manager.add_command("server", Server(host="0.0.0.0"))
 manager.add_command("show-urls", ShowUrls())
 manager.add_command("clean", Clean())
 

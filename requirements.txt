@@ -42,3 +42,4 @@ SQLAlchemy==1.1.14
 webassets==0.12.1
 Werkzeug==0.12.2
 WTForms==2.1
+flask-httpauth
