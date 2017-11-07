@@ -1,4 +1,5 @@
 import tempfile
+import os
 db_file = tempfile.NamedTemporaryFile()
 
 
@@ -20,7 +21,7 @@ class DevConfig(Config):
 
     MONGODB_SETTINGS = {
             "db": "Scheduletest",
-            "host": "127.0.0.1",
+            "host": os.environ['DB_PORT_27017_TCP_ADDR'],
             "port": 27017
             }
 
